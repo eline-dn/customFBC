@@ -62,6 +62,11 @@ def binder_hallucination(design_name, starting_pdb, chain, target_hotspot_residu
     if advanced_settings["use_i_ptm_loss"]:
         # interface pTM loss
         add_i_ptm_loss(af_model, advanced_settings["weights_iptm"])
+    #advanced_settings["use_empty_i_ptm_loss"]=True
+    #advanced_settings["weights_empty_iptm"]=0.5
+    if advanced_settings["use_empty_i_ptm_loss"]:
+        # interface pTM loss
+        add_empty_i_ptm_loss(af_model, advanced_settings["weights_empty_iptm"])
 
     if advanced_settings["use_termini_distance_loss"]:
         # termini distance loss
@@ -412,6 +417,91 @@ def add_i_ptm_loss(self, weight=0.1):
     self._callbacks["model"]["loss"].append(loss_iptm)
     self.opt["weights"]["i_ptm"] = weight
 
+# Define  custom empty iptm loss for colabdesign
+
+def add_empty_i_ptm_loss(self, weight=0.1):
+    target_len = self._target_len
+    target_trim=24
+    binder_len=self._binder_len
+    def custom_empty_iptm_loss(inputs, outputs):
+    """
+    Custom loss to compute ipTM for a binder + trimmed target complex.
+
+    Parameters
+    ----------
+    inputs : dict
+        Standard model input dict (includes batch, params, opt, etc.)
+    outputs : dict
+        Model output dict containing AlphaFold predictions.
+    target_trim : int, optional
+        Number of N-terminal residues to remove from the target structure (default: 24)
+
+    Returns
+    -------
+    loss_value : float
+        ipTM value computed from the binder + trimmed target complex.
+    """
+      # === 1. Extract sequences ===
+      # Get target sequence from inputs["batch"]["aatype"] and convert to string
+      from colabdesign.af.alphafold.common import residue_constants
+      aatype_target = np.asarray(inputs["batch"]["aatype"][:target_len])
+      seq_target = "".join([residue_constants.restypes_with_x[i] for i in aatype_target])
+      print("extracted target sequence")
+
+    # Get binder sequence from model parameters
+      aatype_full = inputs["aatype"]
+      total_len = aatype_full.shape[0]
+      binder_aatype = aatype_full[target_len:total_len]
+      binder_seq = "".join([residue_constants.restypes_with_x[i] for i in binder_aatype])
+      #If your binder length is known (e.g., binder_len), you could slice: binder_aatype = aatype_full[target_len:target_len+binder_len].
+      if np.all(binder_aatype == 0):
+        print("All zeros in binder, binder not ready yet!")
+
+
+      binder_len=len(binder_seq)
+      print(f"extracted binder sequence: {binder_seq}, length={binder_len}")
+  ######## debugged until here, need to find the outputs first :(
+      # ==== 2. extract trimmed pdb structure ===
+      structure = outputs_to_biopython_structure(outputs, seq_target, target_len, chain_id="A")
+      trimmed_pdb = trim_structure(structure, n_trim=target_trim)
+      print("extracted empty pdb, running reprediction")
+      # === reprediction and ipTM computation ===
+      # run a new prediction with binder_seq + trimmed_target_pdb as template,
+      # and compute the ipTM score.
+      clear_mem()
+      model=mk_afdesign_model(protocol="binder",
+                          num_recycles=3,
+                          data_dir=advanced_settings["af_params_dir"],
+                          use_multimer=True,
+                          use_initial_guess=False,
+                          use_template=True,
+                          use_initial_atom_pos=False )
+
+      model.prep_inputs(pdb_filename=trimmed_pdb,
+                          chain="A",
+                          #binder_chain="B",# do not specifiy if the template only contains the target
+                          binder_len=binder_len,
+                          rm_target_seq=False, #b
+                          use_binder_template=False, #a
+                          rm_template_ic=False #c
+                          )
+      prediction_stats = {}
+      for model_num in [0,1]:
+        model.predict(seq=binder_sequence,
+                      models=[model_num],
+                      num_recycles=3)
+        ipTM[model_num+1] = model.aux["log"]["ipTM"]
+
+
+      empty_iptm = (ipTM[1] + ipTM[2]) / 2
+
+    # === 3. Return the custom loss value (negate if minimizing) ===
+      print(f"successful empty iptm extraction: {empty_iptm}" )
+      return {"empty_i_ptm":1-iptm_value}
+
+    self._callbacks["model"]["loss"].append(loss_empty_iptm)
+    self.opt["weights"]["empty_i_ptm"] = weight
+
 # add helicity loss
 def add_helix_loss(self, weight=0):
     def binder_helicity(inputs, outputs):  
@@ -573,3 +663,83 @@ def plot_trajectory(af_model, design_name, design_paths):
             
             # Close the figure
             plt.close()
+
+
+
+# add the functions for the custom loss:
+
+from Bio.PDB import PDBIO
+
+def trim_structure(structure, n_trim=24):
+    for model in structure:
+        for chain in model:
+            # Get all residues in the chain
+            residues = list(chain.get_residues())
+            # Keep residues from index trim_length onwards
+            for i, residue in enumerate(residues):
+                if i < trim_length:
+                    chain.detach_child(residue.get_id())
+    output_pdb_path("empty_template.pdb")
+    io = PDBIO(use_model_flag=1)
+    io.set_structure(structure)
+    io.save(output_pdb_path)
+    return(output_pdb_path)
+
+# Example usage:
+# Assuming you have a PDB file named 'input.pdb' in the current directory
+# trim_pdb('input.pdb', 'trimmed_output.pdb')
+# print("Trimmed PDB file saved as 'trimmed_output.pdb'")
+
+
+from Bio.PDB import StructureBuilder
+import numpy as np
+from colabdesign.af.alphafold.common import residue_constants
+
+def outputs_to_biopython_structure(outputs, seq_target, target_len, chain_id="A"):
+    """
+    Convert AlphaFold outputs (target part) to a Bio.PDB Structure.
+
+    Parameters
+    ----------
+    outputs : dict
+        Model outputs containing structure_module keys.
+    seq_target : str
+        Target sequence (length == target_len).
+    target_len : int
+        Number of residues belonging to the target.
+    chain_id : str, optional
+        Chain ID for the Bio.PDB structure (default: 'A').
+
+    Returns
+    -------
+    structure : Bio.PDB.Structure.Structure
+        Biopython structure containing the target coordinates.
+    """
+
+    atom_positions = np.asarray(outputs["structure_module"]["final_atom_positions"])
+    atom_mask = np.asarray(outputs["structure_module"]["final_atom_mask"])
+
+    # Only keep target part
+    atom_positions = atom_positions[:target_len]
+    atom_mask = atom_mask[:target_len]
+
+    # Build the structure
+    builder = StructureBuilder.StructureBuilder()
+    builder.init_structure("AF_Target")
+    builder.init_model(1)
+    builder.init_chain(chain_id)
+
+    for i, res in enumerate(seq_target):
+        resname = residue_constants.restype_3to1.get(res, res)
+        builder.init_residue(res, " ", i + 1, " ")
+
+        atom_names = residue_constants.atom_types
+        coords = atom_positions[i]
+        mask = atom_mask[i]
+
+        for atom_name, coord, m in zip(atom_names, coords, mask):
+            if m > 0.5:  # only add valid atoms
+                builder.init_atom(atom_name, coord, 1.0, 1.0, " ", atom_name, i + 1, element=atom_name[0])
+
+    structure = builder.get_structure()
+    return structure
