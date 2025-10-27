@@ -62,8 +62,8 @@ def binder_hallucination(design_name, starting_pdb, chain, target_hotspot_residu
     if advanced_settings["use_i_ptm_loss"]:
         # interface pTM loss
         add_i_ptm_loss(af_model, advanced_settings["weights_iptm"])
-    #advanced_settings["use_empty_i_ptm_loss"]=True
-    #advanced_settings["weights_empty_iptm"]=0.5
+    advanced_settings["use_empty_i_ptm_loss"]=True
+    advanced_settings["weights_empty_iptm"]=0.5
     if advanced_settings["use_empty_i_ptm_loss"]:
         # interface pTM loss
         add_empty_i_ptm_loss(af_model, advanced_settings["weights_empty_iptm"])
@@ -424,23 +424,23 @@ def add_empty_i_ptm_loss(self, weight=0.1):
     target_trim=24
     binder_len=self._binder_len
     def custom_empty_iptm_loss(inputs, outputs):
-    """
-    Custom loss to compute ipTM for a binder + trimmed target complex.
+      """
+      Custom loss to compute ipTM for a binder + trimmed target complex.
 
-    Parameters
-    ----------
-    inputs : dict
-        Standard model input dict (includes batch, params, opt, etc.)
-    outputs : dict
-        Model output dict containing AlphaFold predictions.
-    target_trim : int, optional
-        Number of N-terminal residues to remove from the target structure (default: 24)
+      Parameters
+      ----------
+      inputs : dict
+          Standard model input dict (includes batch, params, opt, etc.)
+      outputs : dict
+          Model output dict containing AlphaFold predictions.
+      target_trim : int, optional
+          Number of N-terminal residues to remove from the target structure (default: 24)
 
-    Returns
-    -------
-    loss_value : float
-        ipTM value computed from the binder + trimmed target complex.
-    """
+      Returns
+      -------
+      loss_value : float
+          ipTM value computed from the binder + trimmed target complex.
+      """
       # === 1. Extract sequences ===
       # Get target sequence from inputs["batch"]["aatype"] and convert to string
       from colabdesign.af.alphafold.common import residue_constants
