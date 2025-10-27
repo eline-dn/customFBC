@@ -423,7 +423,7 @@ def add_empty_i_ptm_loss(self, weight=0.1):
     target_len = self._target_len
     target_trim=24
     binder_len=self._binder_len
-    def custom_empty_iptm_loss(inputs, outputs):
+    def loss_empty_iptm(inputs, outputs):
       """
       Custom loss to compute ipTM for a binder + trimmed target complex.
 
@@ -444,7 +444,7 @@ def add_empty_i_ptm_loss(self, weight=0.1):
       # === 1. Extract sequences ===
       # Get target sequence from inputs["batch"]["aatype"] and convert to string
       from colabdesign.af.alphafold.common import residue_constants
-      aatype_target = np.asarray(inputs["batch"]["aatype"][:target_len])
+      aatype_target = inputs["batch"]["aatype"][:target_len]
       seq_target = "".join([residue_constants.restypes_with_x[i] for i in aatype_target])
       print("extracted target sequence")
 
@@ -716,8 +716,8 @@ def outputs_to_biopython_structure(outputs, seq_target, target_len, chain_id="A"
         Biopython structure containing the target coordinates.
     """
 
-    atom_positions = np.asarray(outputs["structure_module"]["final_atom_positions"])
-    atom_mask = np.asarray(outputs["structure_module"]["final_atom_mask"])
+    atom_positions = outputs["structure_module"]["final_atom_positions"]
+    atom_mask = outputs["structure_module"]["final_atom_mask"]
 
     # Only keep target part
     atom_positions = atom_positions[:target_len]
