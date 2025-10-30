@@ -528,7 +528,7 @@ def add_delta_i_ptm_loss(self, weight=0.1):
         )
 
         """ compute plugged iptm and the difference between plugged and empty"""
-        p = 1 - get_ptm(inputs, outputs, interface=True)
+        p = get_ptm(inputs, outputs, interface=True)
         plugged_i_ptm = mask_loss(p)
 
         # define loss: having the biggest plugged - empty value means minimizing 1-delta
