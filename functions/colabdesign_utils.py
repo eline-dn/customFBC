@@ -15,6 +15,7 @@ from colabdesign.af.loss import get_ptm, mask_loss, get_dgram_bins, _get_con_los
 from colabdesign.shared.utils import copy_dict
 from colabdesign.shared.prep import prep_pos
 from .biopython_utils import hotspot_residues, calculate_clash_score, calc_ss_percentage, calculate_percentages, align_pdbs, unaligned_rmsd, score_interface
+from colabdesign.af.alphafold.common import confidence, residue_constants
 
 # hallucinate a binder
 def binder_hallucination(design_name, starting_pdb, chain, target_hotspot_residues, length, seed, helicity_value, design_models, advanced_settings, design_paths):
