@@ -63,11 +63,20 @@ def binder_hallucination(design_name, starting_pdb, chain, target_hotspot_residu
     if advanced_settings["use_i_ptm_loss"]:
         # interface pTM loss
         add_i_ptm_loss(af_model, advanced_settings["weights_iptm"])
+        
     advanced_settings["use_empty_i_ptm_loss"]=True
     advanced_settings["weights_empty_iptm"]=0.1
     if advanced_settings["use_empty_i_ptm_loss"]:
         # interface pTM loss
         add_empty_i_ptm_loss(af_model, advanced_settings["weights_empty_iptm"])
+        
+    advanced_settings["use_delta_i_ptm_loss"]=True
+    advanced_settings["weights_delta_iptm"]=0.1
+    if advanced_settings["use_delta_i_ptm_loss"]:
+        add_delta_i_ptm_loss(af_model, advanced_settings["weights_delta_iptm"])
+
+    
+    
 
     if advanced_settings["use_termini_distance_loss"]:
         # termini distance loss
@@ -423,13 +432,9 @@ def add_i_ptm_loss(self, weight=0.1):
 def add_empty_i_ptm_loss(self, weight=0.1):
     """
     Adds a differentiable proxy loss encouraging binders that
-    have (high iPTM with the plugged target and) low iPTM with
+    have low iPTM with
     the trimmed (empty) target.
 
-    Args:
-      target_len (int): number of residues in the target part of the complex.
-      trim_k (int): number of N-terminal residues to remove from the target.
-      weight (float): scaling weight for this loss term.
     """
     target_len = self._target_len
     
@@ -475,6 +480,66 @@ def add_empty_i_ptm_loss(self, weight=0.1):
     # register the new loss in the model’s callbacks
     self._callbacks["model"]["loss"].append(loss_empty_iptm)
     self.opt["weights"]["iptm_empty"] = weight
+
+# add custom delta iptm loss
+
+def add_delta_i_ptm_loss(self, weight=0.1):
+    """
+    Adds a differentiable proxy loss encouraging binders that
+    have (high iPTM with the plugged target and) low iPTM with
+    the trimmed (empty) target.
+
+  
+    """
+    target_len = self._target_len
+    
+    binder_len=self._binder_len
+    def loss_delta_iptm(inputs, outputs):
+        """Compute differentiable proxy = iptm_trimmed """
+        pae_logits = outputs["predicted_aligned_error"]["logits"]   # [L, L, n_bins]
+        breaks = outputs["predicted_aligned_error"]["breaks"]       # [n_bins-1] or [n_bins]
+        seq_mask = inputs.get("seq_mask") #=inputs[seq_mask]
+        asym_id = inputs.get("asym_id", None)#=input["asym_id"]
+        L = pae_logits.shape[0]
+
+        
+
+        # --- trimmed iPTM (simulate removing first trim_k residues from target) ---
+        k=24
+        keep_idx = jnp.arange(k, L)
+        #k = jnp.minimum(trim_k, target_len)
+        
+        #keep_mask = jnp.ones((L,), dtype=bool).at[:k].set(False)
+        #idxs = jnp.arange(L)
+        #keep_mask = idxs >= k  # True for indices >= k
+        #keep_idx = jnp.arange(L)[keep_mask]
+
+        logits_trimmed = jnp.take(pae_logits, keep_idx, axis=0)
+        logits_trimmed = jnp.take(logits_trimmed, keep_idx, axis=1)
+        seq_mask_trimmed = jnp.take(seq_mask, keep_idx, axis=0)
+        asym_id_trimmed = None if asym_id is None else jnp.take(asym_id, keep_idx, axis=0)
+
+        iptm_trimmed = confidence.predicted_tm_score(
+            logits_trimmed,
+            breaks,
+            residue_weights=seq_mask_trimmed,
+            asym_id=asym_id_trimmed,
+            use_jnp=True,
+        )
+
+        """ compute plugged iptm and the difference between plugged and empty"""
+        p = 1 - get_ptm(inputs, outputs, interface=True)
+        plugged_i_ptm = mask_loss(p)
+
+        # define loss: having the biggest plugged - empty value means minimizing 1-delta
+        delta= plugged_i_ptm-iptm_trimmed
+        loss_val = 1-jnp.abs(delta)
+
+        return {"iptm_delta": loss_val}
+
+    # register the new loss in the model’s callbacks
+    self._callbacks["model"]["loss"].append(loss_delta_iptm)
+    self.opt["weights"]["iptm_delta"] = weight
 
 
 # add helicity loss
