@@ -445,11 +445,12 @@ def add_empty_i_ptm_loss(self, weight=0.1):
 
         # --- trimmed iPTM (simulate removing first trim_k residues from target) ---
         k=24
+        keep_idx = jnp.arange(k, L)
         #k = jnp.minimum(trim_k, target_len)
         
         #keep_mask = jnp.ones((L,), dtype=bool).at[:k].set(False)
-        idxs = jnp.arange(L)
-        keep_mask = idxs >= k  # True for indices >= k
+        #idxs = jnp.arange(L)
+        #keep_mask = idxs >= k  # True for indices >= k
         #keep_idx = jnp.arange(L)[keep_mask]
 
         logits_trimmed = jnp.take(pae_logits, keep_idx, axis=0)
