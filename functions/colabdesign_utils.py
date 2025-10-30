@@ -63,7 +63,7 @@ def binder_hallucination(design_name, starting_pdb, chain, target_hotspot_residu
         # interface pTM loss
         add_i_ptm_loss(af_model, advanced_settings["weights_iptm"])
     advanced_settings["use_empty_i_ptm_loss"]=True
-    advanced_settings["weights_empty_iptm"]=0.5
+    advanced_settings["weights_empty_iptm"]=0.1
     if advanced_settings["use_empty_i_ptm_loss"]:
         # interface pTM loss
         add_empty_i_ptm_loss(af_model, advanced_settings["weights_empty_iptm"])
@@ -420,87 +420,56 @@ def add_i_ptm_loss(self, weight=0.1):
 # Define  custom empty iptm loss for colabdesign
 
 def add_empty_i_ptm_loss(self, weight=0.1):
+    """
+    Adds a differentiable proxy loss encouraging binders that
+    have (high iPTM with the plugged target and) low iPTM with
+    the trimmed (empty) target.
+
+    Args:
+      target_len (int): number of residues in the target part of the complex.
+      trim_k (int): number of N-terminal residues to remove from the target.
+      weight (float): scaling weight for this loss term.
+    """
     target_len = self._target_len
-    target_trim=24
+    trim_k=24
     binder_len=self._binder_len
     def loss_empty_iptm(inputs, outputs):
-      """
-      Custom loss to compute ipTM for a binder + trimmed target complex.
+        """Compute differentiable proxy = iptm_trimmed , to minimize"""
+        pae_logits = outputs["predicted_aligned_error"]["logits"]   # [L, L, n_bins]
+        breaks = outputs["predicted_aligned_error"]["breaks"]       # [n_bins-1] or [n_bins]
+        seq_mask = inputs.get("seq_mask") #=inputs[seq_mask]
+        asym_id = inputs.get("asym_id", None)#=input["asym_id"]
+        L = pae_logits.shape[0]
 
-      Parameters
-      ----------
-      inputs : dict
-          Standard model input dict (includes batch, params, opt, etc.)
-      outputs : dict
-          Model output dict containing AlphaFold predictions.
-      target_trim : int, optional
-          Number of N-terminal residues to remove from the target structure (default: 24)
+        
 
-      Returns
-      -------
-      loss_value : float
-          ipTM value computed from the binder + trimmed target complex.
-      """
-      # === 1. Extract sequences ===
-      # Get target sequence from inputs["batch"]["aatype"] and convert to string
-      from colabdesign.af.alphafold.common import residue_constants
-      aatype_target = inputs["batch"]["aatype"][:target_len]
-      seq_target = "".join([residue_constants.restypes_with_x[i] for i in aatype_target])
-      print("extracted target sequence")
+        # --- trimmed iPTM (simulate removing first trim_k residues from target) ---
+        k = jnp.minimum(trim_k, target_len)
+        keep_mask = jnp.ones((L,), dtype=bool).at[:k].set(False)
+        keep_idx = jnp.arange(L)[keep_mask]
 
-    # Get binder sequence from model parameters
-      aatype_full = inputs["aatype"]
-      total_len = aatype_full.shape[0]
-      binder_aatype = aatype_full[target_len:total_len]
-      binder_seq = "".join([residue_constants.restypes_with_x[i] for i in binder_aatype])
-      #If your binder length is known (e.g., binder_len), you could slice: binder_aatype = aatype_full[target_len:target_len+binder_len].
-      if np.all(binder_aatype == 0):
-        print("All zeros in binder, binder not ready yet!")
+        logits_trimmed = jnp.take(pae_logits, keep_idx, axis=0)
+        logits_trimmed = jnp.take(logits_trimmed, keep_idx, axis=1)
+        seq_mask_trimmed = jnp.take(seq_mask, keep_idx, axis=0)
+        asym_id_trimmed = None if asym_id is None else jnp.take(asym_id, keep_idx, axis=0)
 
+        iptm_trimmed = confidence.predicted_tm_score(
+            logits_trimmed,
+            breaks,
+            residue_weights=seq_mask_trimmed,
+            asym_id=asym_id_trimmed,
+            use_jnp=True,
+        )
 
-      binder_len=len(binder_seq)
-      print(f"extracted binder sequence: {binder_seq}, length={binder_len}")
-  ######## debugged until here, need to find the outputs first :(
-      # ==== 2. extract trimmed pdb structure ===
-      structure = outputs_to_biopython_structure(outputs, seq_target, target_len, chain_id="A")
-      trimmed_pdb = trim_structure(structure, n_trim=target_trim)
-      print("extracted empty pdb, running reprediction")
-      # === reprediction and ipTM computation ===
-      # run a new prediction with binder_seq + trimmed_target_pdb as template,
-      # and compute the ipTM score.
-      clear_mem()
-      model=mk_afdesign_model(protocol="binder",
-                          num_recycles=3,
-                          data_dir=advanced_settings["af_params_dir"],
-                          use_multimer=True,
-                          use_initial_guess=False,
-                          use_template=True,
-                          use_initial_atom_pos=False )
+        # define loss: minimize iptm_trimmed 
+        loss_val = iptm_trimmed
 
-      model.prep_inputs(pdb_filename=trimmed_pdb,
-                          chain="A",
-                          #binder_chain="B",# do not specifiy if the template only contains the target
-                          binder_len=binder_len,
-                          rm_target_seq=False, #b
-                          use_binder_template=False, #a
-                          rm_template_ic=False #c
-                          )
-      prediction_stats = {}
-      for model_num in [0,1]:
-        model.predict(seq=binder_sequence,
-                      models=[model_num],
-                      num_recycles=3)
-        ipTM[model_num+1] = model.aux["log"]["ipTM"]
+        return {"iptm_empty": loss_val}
 
-
-      empty_iptm = (ipTM[1] + ipTM[2]) / 2
-
-    # === 3. Return the custom loss value (negate if minimizing) ===
-      print(f"successful empty iptm extraction: {empty_iptm}" )
-      return {"empty_i_ptm":1-iptm_value}
-
+    # register the new loss in the model’s callbacks
     self._callbacks["model"]["loss"].append(loss_empty_iptm)
-    self.opt["weights"]["empty_i_ptm"] = weight
+    self.opt["weights"]["iptm_empty"] = weight
+
 
 # add helicity loss
 def add_helix_loss(self, weight=0):
