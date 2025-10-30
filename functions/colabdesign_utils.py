@@ -431,7 +431,7 @@ def add_empty_i_ptm_loss(self, weight=0.1):
       weight (float): scaling weight for this loss term.
     """
     target_len = self._target_len
-    trim_k=24
+    
     binder_len=self._binder_len
     def loss_empty_iptm(inputs, outputs):
         """Compute differentiable proxy = iptm_trimmed , to minimize"""
@@ -444,6 +444,7 @@ def add_empty_i_ptm_loss(self, weight=0.1):
         
 
         # --- trimmed iPTM (simulate removing first trim_k residues from target) ---
+        trim_k=24
         k = jnp.minimum(trim_k, target_len)
         keep_mask = jnp.ones((L,), dtype=bool).at[:k].set(False)
         keep_idx = jnp.arange(L)[keep_mask]
