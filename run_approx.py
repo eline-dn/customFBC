@@ -57,6 +57,7 @@ trajectory_metrics={}
 
 # Initialize an empty DataFrame to store results
 all_design_stats_df = pd.DataFrame()
+all_design_stats_df.to_csv(os.path.join(target_settings["design_path"], 'all_design_stats.csv'), index=False)
 
 # run a few binders (100), random length
 
@@ -122,15 +123,17 @@ while i < 100:
       # Convert the dictionary to a DataFrame row
   current_design_df = pd.DataFrame([current_design_data], index=[design_name])
   print(current_design_df)
+  first=True if (i==0) else False
+  current_design_df.to_csv(os.path.join(target_settings["design_path"], 'all_design_stats.csv'), mode='a', header=first, index=True)
 
       # Append the row to the main DataFrame
-  all_design_stats_df = pd.concat([all_design_stats_df, current_design_df])
+  #all_design_stats_df = pd.concat([all_design_stats_df, current_design_df])
 
 
 
 #end of loop
 #print(all_design_stats_df)
-all_design_stats_df.to_csv(os.path.join(target_settings["design_path"], 'all_design_stats.csv'))
+#all_design_stats_df.to_csv(os.path.join(target_settings["design_path"], 'all_design_stats.csv'))
 
 
 #plot 2 metrics
