@@ -174,7 +174,7 @@ def run_prediction_with_template(model,
                         rm_template_ic=hardtarget_mode #c
                         )
     prediction_stats = {}
-    for model_num in [0,1]:
+    for model_num in [0]:
       model.predict(seq=binder_sequence,
                     models=[model_num],
                     num_recycles=3)
