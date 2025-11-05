@@ -65,13 +65,13 @@ def binder_hallucination(design_name, starting_pdb, chain, target_hotspot_residu
         # interface pTM loss
         add_i_ptm_loss(af_model, advanced_settings["weights_iptm"])
         
-    #advanced_settings["use_empty_i_ptm_loss"]=True
+    advanced_settings["use_empty_i_ptm_loss"]=True
     #advanced_settings["weights_empty_iptm"]=0.0
     if advanced_settings["use_empty_i_ptm_loss"]:
         # interface pTM loss
         add_empty_i_ptm_loss(af_model, advanced_settings["weights_empty_iptm"])
         
-   # advanced_settings["use_delta_i_ptm_loss"]=True
+    advanced_settings["use_delta_i_ptm_loss"]=True
     #advanced_settings["weights_delta_iptm"]=0.1
     if advanced_settings["use_delta_i_ptm_loss"]:
         add_delta_i_ptm_loss(af_model, advanced_settings["weights_delta_iptm"])
