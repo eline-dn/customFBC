@@ -60,8 +60,8 @@ all_design_stats_df = pd.DataFrame()
 
 # run a few binders (100), random length
 
-i=1
-while i < 2:
+i=0
+while i < 100:
   i+=1
   seed = int(np.random.randint(0, high=999999, size=1, dtype=int)[0])
   samples = np.arange(min(target_settings["lengths"]), max(target_settings["lengths"]) + 1)
