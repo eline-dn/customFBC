@@ -84,7 +84,7 @@ while i < 100:
   binder_sequence = trajectory_sequence # Assuming trajectory_sequence is the binder sequence
   length = len(binder_sequence)
 
-  prediction_model = compile_prediction_models(hardtarget_mode=False, data_dir=params)
+  prediction_model = compile_prediction_models(hardtarget_mode=False, data_dir=advanced_settings["af_params_dir"])
 
       # Define output folder for templates and predictions
   output_folder = design_paths["Trajectory"] # Or another suitable folder
