@@ -197,8 +197,8 @@ def run_prediction_with_template(model,
 
 
       # unaligned RMSD calculate to determine if binder is in the designed binding site
-      rmsd_site = unaligned_rmsd(BC_complex_pdb, predicted_complex_pdb, "B", "B")
-      stats[f"{spec}{barrel}_Binder_RMSD_to_binding_site"] = rmsd_site # this should be used to filter the models that are binding in the predicted binding site
+      #rmsd_site = unaligned_rmsd(BC_complex_pdb, predicted_complex_pdb, "B", "B")
+      #stats[f"{spec}{barrel}_Binder_RMSD_to_binding_site"] = rmsd_site # this should be used to filter the models that are binding in the predicted binding site
 
       prediction_stats[model_num+1] = stats # 2 dictionnaries index 1 and 2 to eventually add to the metrics df
     transformed_df = transform_prediction_stats_to_df(prediction_stats)
