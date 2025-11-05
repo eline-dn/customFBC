@@ -76,7 +76,7 @@ while i < 100:
                                                   design_models, advanced_settings, design_paths)
   trajectory_metrics[design_name] = copy_dict(trajectory._tmp["best"]["aux"]["log"]) # permet de récupérer iptm plugged et empty
   trajectory_pdb = os.path.join(design_paths["Trajectory"], design_name + ".pdb")
-  trajectory.save_pdb(model_pdb_path)
+  trajectory.save_pdb(trajectory_pdb)
   trajectory_metrics[design_name] = {k: round(v, 2) if isinstance(v, float) else v for k, v in trajectory_metrics[design_name].items()}
 
       # Extract binder sequence from .pdb
