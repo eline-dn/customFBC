@@ -59,7 +59,8 @@ def binder_hallucination(design_name, starting_pdb, chain, target_hotspot_residu
     if advanced_settings["use_rg_loss"]:
         # radius of gyration loss
         add_rg_loss(af_model, advanced_settings["weights_rg"])
-
+        
+    advanced_settings["weights_iptm"]=0.1
     if advanced_settings["use_i_ptm_loss"]:
         # interface pTM loss
         add_i_ptm_loss(af_model, advanced_settings["weights_iptm"])
