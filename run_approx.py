@@ -3,13 +3,13 @@
 from functions import *
 
 
-from rosetta_functions import *
+#from rosetta_functions import *
 import os
 from metrics_utils import *
 import pandas as pd
 import glob
 import time
-from cofolding_utils import *
+#from cofolding_utils import *
 
 # Check if JAX-capable GPU is available, otherwise exit
 check_jax_gpu()
