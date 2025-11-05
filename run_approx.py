@@ -123,6 +123,7 @@ while i < 100:
       # Convert the dictionary to a DataFrame row
   current_design_df = pd.DataFrame([current_design_data], index=[design_name])
   print(current_design_df)
+  print( list(current_design_df.columns))
   first=True if (i==0) else False
   current_design_df.to_csv(os.path.join(target_settings["design_path"], 'all_design_stats.csv'), mode='a', header=first, index=True)
 
