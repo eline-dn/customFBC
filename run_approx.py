@@ -57,7 +57,8 @@ trajectory_metrics={}
 
 # Initialize an empty DataFrame to store results
 all_design_stats_df = pd.DataFrame()
-all_design_stats_df.to_csv(os.path.join(target_settings["design_path"], 'all_design_stats.csv'), index=False)
+if not glob.glob(os.path.join(target_settings["design_path"], 'all_design_stats.csv')): # create the file if it doesn't exist yet
+  all_design_stats_df.to_csv(os.path.join(target_settings["design_path"], 'all_design_stats.csv'), index=False)
 
 # run a few binders (100), random length
 
