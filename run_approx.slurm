@@ -6,7 +6,7 @@
 #SBATCH --qos=normal
 #SBATCH --gres=gpu:1
 #SBATCH --mem 42gb
-#SBATCH --time 04:00:00
+#SBATCH --time 06:00:00
 #SBATCH --output=approx_test_%A.log
 
 #SBATCH --mail-type=ALL
