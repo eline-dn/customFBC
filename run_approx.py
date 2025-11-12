@@ -76,6 +76,11 @@ while i < 100:
   trajectory = binder_hallucination(design_name, target_settings["starting_pdb"], target_settings["chains"],
                                                 target_settings["target_hotspot_residues"], length, seed, helicity_value,
                                                   design_models, advanced_settings, design_paths)
+  # check the terminate signal:
+  if trajectory.aux["log"]["terminate"] != "":
+    i-=1 # to keep producing binders
+    continue # the binder wouldn't have been selected by BindCraft for pMPNN optimisation, so we don't keep it
+  #else : keep going with the metrics computation
   trajectory_metrics[design_name] = copy_dict(trajectory._tmp["best"]["aux"]["log"]) # permet de récupérer iptm plugged et empty
   trajectory_pdb = os.path.join(design_paths["Trajectory"], design_name + ".pdb")
   trajectory.save_pdb(trajectory_pdb)
