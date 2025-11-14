@@ -559,10 +559,7 @@ def add_delta_i_ptm_loss(self, weight=0.1):
 
 def add_reverse_i_ptm_loss(self, weight=0.1):
     """
-    Adds a differentiable proxy loss encouraging binders that
-    have low "ipTM material" for the residues associated with the helix
-
-  
+    
     """
     target_len = self._target_len
     
@@ -574,33 +571,13 @@ def add_reverse_i_ptm_loss(self, weight=0.1):
         seq_mask = inputs.get("seq_mask") #=inputs[seq_mask]
         asym_id = inputs.get("asym_id", None)#=input["asym_id"]
         L = pae_logits.shape[0]
-
-        """
-        the goal is to maximize the interactions with the helix, and minimize the ones with the remote loops of the top of the barrel
-        """
-
         
-
-        # --- trimmed iPTM (simulate removing first trim_k residues from target) ---
-        k=24
-        keep_idx = jnp.arange(k)
-        #k = jnp.minimum(trim_k, target_len)
-        
-        #keep_mask = jnp.ones((L,), dtype=bool).at[:k].set(False)
-        #idxs = jnp.arange(L)
-        #keep_mask = idxs >= k  # True for indices >= k
-        #keep_idx = jnp.arange(L)[keep_mask]
-
-        logits_trimmed = jnp.take(pae_logits, keep_idx, axis=0)
-        logits_trimmed = jnp.take(logits_trimmed, keep_idx, axis=1)
-        seq_mask_trimmed = jnp.take(seq_mask, keep_idx, axis=0)
-        asym_id_trimmed = None if asym_id is None else jnp.take(asym_id, keep_idx, axis=0)
 
         iptm_trimmed = confidence.predicted_tm_score(
-            logits_trimmed,
+            pae_logits,
             breaks,
-            residue_weights=seq_mask_trimmed,
-            asym_id=asym_id_trimmed,
+            residue_weights=seq_mask,
+            asym_id=asym_id,
             use_jnp=True,
         )
 
