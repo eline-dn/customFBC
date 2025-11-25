@@ -79,11 +79,8 @@ def binder_hallucination(design_name, starting_pdb, chain, target_hotspot_residu
 
     #advanced_settings["use_delta_i_ptm_loss"]=True
     #advanced_settings["weights_delta_iptm"]=0.1
-    if advanced_settings["use_reverse_ipTM_loss"]:
-        add_reverse_i_ptm_loss(af_model, advanced_settings["weights_reverse_iptm"])
-
-    
-    
+    if advanced_settings["use_contrib_ipTM_loss"]:
+        add_i_ptm_contrib_loss(af_model, advanced_settings["weights_contrib_iptm"])
 
     if advanced_settings["use_termini_distance_loss"]:
         # termini distance loss
@@ -555,32 +552,42 @@ def add_delta_i_ptm_loss(self, weight=0.1):
     self.opt["weights"]["iptm_delta"] = weight
 
 
-# add custom reverse iptm loss
+# add custom contrib iptm loss
 
-def add_reverse_i_ptm_loss(self, weight=0.1):
+def add_i_ptm_contrib_loss(self, weight=0.1):
     """
     Adds a differentiable proxy loss encouraging binders that
     have low "ipTM material" for the residues associated with the helix
-
+    i.e. maximise the contribution of the helix for the global iptm, or minimise the iptm contribution of the interactions from the side of the barrel 
   
     """
     target_len = self._target_len
     
     binder_len=self._binder_len
-    def loss_reverse_iptm(inputs, outputs):
+    def loss_contrib_iptm(inputs, outputs):
         """Compute differentiable "ipTM material score" """
+        pae = {"residue_weights":inputs["seq_mask"],
+        **outputs["predicted_aligned_error"]}
+     if interface:
+       if "asym_id" not in pae:
+         pae["asym_id"] = inputs["asym_id"]
+     else:
+       if "asym_id" in pae:
+         pae.pop("asym_id")
+     return confidence.predicted_tm_score(**pae, use_jnp=True) # modify predicted_tm_score for our purpose
+        """
         pae_logits = outputs["predicted_aligned_error"]["logits"]   # [L, L, n_bins]
         breaks = outputs["predicted_aligned_error"]["breaks"]       # [n_bins-1] or [n_bins]
         seq_mask = inputs.get("seq_mask") #=inputs[seq_mask]
         asym_id = inputs.get("asym_id", None)#=input["asym_id"]
         L = pae_logits.shape[0]
-
+        """
         """
         the goal is to maximize the interactions with the helix, and minimize the ones with the remote loops of the top of the barrel
         """
 
         
-
+        """
         # --- trimmed iPTM (simulate removing first trim_k residues from target) ---
         k=24
         keep_idx = jnp.arange(k)
@@ -604,19 +611,16 @@ def add_reverse_i_ptm_loss(self, weight=0.1):
             use_jnp=True,
         )
 
-        """ compute plugged iptm and the difference between plugged and empty"""
-        p = get_ptm(inputs, outputs, interface=True)
-        plugged_i_ptm = mask_loss(p)
+        """
 
-        # define loss: having the biggest plugged - empty value means minimizing 1-delta
-        delta= plugged_i_ptm-iptm_trimmed
-        loss_val = 1-jnp.abs(delta)
+        
+        loss_val = 
 
-        return {"iptm_delta": loss_val}
+        return {"iptm_contrib": loss_val}
 
     # register the new loss in the model’s callbacks
-    self._callbacks["model"]["loss"].append(loss_delta_iptm)
-    self.opt["weights"]["iptm_delta"] = weight
+    self._callbacks["model"]["loss"].append(loss_contrib_iptm)
+    self.opt["weights"]["iptm_contrib"] = weight
 
 
 # add helicity loss
