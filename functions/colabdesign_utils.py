@@ -176,19 +176,19 @@ def binder_hallucination(design_name, starting_pdb, chain, target_hotspot_residu
                     #update_failures(failure_csv, 'Trajectory_one-hot_pLDDT')
                     print("One-hot trajectory pLDDT too low to continue: "+str(onehot_plddt))
                     # save pdb anyways 
-                    af_model.save_pdb(model_pdb_path)
+                    #af_model.save_pdb(model_pdb_path)
 
             else:
                 #update_failures(failure_csv, 'Trajectory_softmax_pLDDT')
                 print("Softmax trajectory pLDDT too low to continue: "+str(softmax_plddt))
                 # save pdb anyways 
-                af_model.save_pdb(model_pdb_path)
+                #af_model.save_pdb(model_pdb_path)
 
         else:
             #update_failures(failure_csv, 'Trajectory_logits_pLDDT')
             print("Initial trajectory pLDDT too low to continue: "+str(initial_plddt))
             # save pdb anyways 
-            af_model.save_pdb(model_pdb_path)
+            #af_model.save_pdb(model_pdb_path)
     # end BindCraft default design model
     
     elif advanced_settings["design_algorithm"] == 'mcmc':
@@ -205,7 +205,7 @@ def binder_hallucination(design_name, starting_pdb, chain, target_hotspot_residu
 
     ### save trajectory PDB
     final_plddt = get_best_plddt(af_model, length)
-    af_model.save_pdb(model_pdb_path)
+    #af_model.save_pdb(model_pdb_path)
     af_model.aux["log"]["terminate"] = ""
 
     # let's check whether the trajectory is worth optimising by checking confidence, clashes, and contacts
