@@ -79,6 +79,8 @@ while i < 100:
   # check the terminate signal:
   if trajectory.aux["log"]["terminate"] != "":
     i-=1 # to keep producing binders
+    if os.path.exists(f"/Trajectory/{binder_name}.pdb"):
+      os.remove(f"/Trajectory/{binder_name}")
     continue # the binder wouldn't have been selected by BindCraft for pMPNN optimisation, so we don't keep it
   #else : keep going with the metrics computation
   trajectory_metrics[design_name] = copy_dict(trajectory._tmp["best"]["aux"]["log"]) # permet de récupérer iptm plugged et empty
@@ -130,7 +132,10 @@ while i < 100:
   current_design_df = pd.DataFrame([current_design_data], index=[design_name])
   print(current_design_df)
   print( list(current_design_df.columns))
-  first=True if (i==0) else False
+  if i==0:
+    first=True
+  else:
+    first=False # save header in csv only if this is the first time we're saving something inside
   current_design_df.to_csv(os.path.join(target_settings["design_path"], 'all_design_stats.csv'), mode='a', header=first, index=True)
 
       # Append the row to the main DataFrame
