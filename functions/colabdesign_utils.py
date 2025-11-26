@@ -563,6 +563,7 @@ def add_delta_i_ptm_loss(self, weight=0.1):
 
 def add_i_ptm_contrib_A_helix_loss(self, weight=0.1):
     """
+    
     Adds a differentiable proxy loss encouraging binders that
     have low "ipTM material" for the residues associated with the helix
     i.e. maximise the contribution of the helix for the global iptm, or minimise the iptm contribution of the interactions from the side of the barrel 
