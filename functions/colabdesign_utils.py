@@ -17,6 +17,11 @@ from colabdesign.shared.prep import prep_pos
 from .biopython_utils import hotspot_residues, calculate_clash_score, calc_ss_percentage, calculate_percentages, align_pdbs, unaligned_rmsd, score_interface
 from colabdesign.af.alphafold.common import confidence, residue_constants
 
+SCRIPT_DIR = os.path.dirname(__file__)
+sys.path.append(f"{SCRIPT_DIR}")
+from custom_loss import iptm_contrib_variant_A
+
+
 # hallucinate a binder
 def binder_hallucination(design_name, starting_pdb, chain, target_hotspot_residues, length, seed, helicity_value, design_models, advanced_settings, design_paths):
     model_pdb_path = os.path.join(design_paths["Trajectory"], design_name+".pdb")
@@ -79,11 +84,10 @@ def binder_hallucination(design_name, starting_pdb, chain, target_hotspot_residu
 
     #advanced_settings["use_delta_i_ptm_loss"]=True
     #advanced_settings["weights_delta_iptm"]=0.1
-    if advanced_settings["use_reverse_ipTM_loss"]:
-        add_reverse_i_ptm_loss(af_model, advanced_settings["weights_reverse_iptm"])
-
-    
-    
+    if advanced_settings["use_contrib_A_helix_ipTM_loss"]:
+        add_i_ptm_contrib_A_helix_loss(af_model, advanced_settings["weights_contrib_A_helix_iptm"])
+    if advanced_settings["use_contrib_A_barrel_ipTM_loss"]:
+        add_i_ptm_contrib_A_barrel_loss(af_model, advanced_settings["weights_contrib_A_barrel_iptm"])
 
     if advanced_settings["use_termini_distance_loss"]:
         # termini distance loss
@@ -555,45 +559,60 @@ def add_delta_i_ptm_loss(self, weight=0.1):
     self.opt["weights"]["iptm_delta"] = weight
 
 
-# add custom reverse iptm loss
+# add custom contrib iptm loss 
 
-def add_reverse_i_ptm_loss(self, weight=0.1):
+def add_i_ptm_contrib_A_helix_loss(self, weight=0.1):
     """
     
+    Adds a differentiable proxy loss encouraging binders that
+    have low "ipTM material" for the residues associated with the helix
+    i.e. maximise the contribution of the helix for the global iptm, or minimise the iptm contribution of the interactions from the side of the barrel 
+  
     """
     target_len = self._target_len
     
     binder_len=self._binder_len
-    def loss_reverse_iptm(inputs, outputs):
+    def loss_contrib_A_helix_iptm(inputs, outputs):
         """Compute differentiable "ipTM material score" """
-        pae_logits = outputs["predicted_aligned_error"]["logits"]   # [L, L, n_bins]
-        breaks = outputs["predicted_aligned_error"]["breaks"]       # [n_bins-1] or [n_bins]
-        seq_mask = inputs.get("seq_mask") #=inputs[seq_mask]
-        asym_id = inputs.get("asym_id", None)#=input["asym_id"]
-        L = pae_logits.shape[0]
-        
+        pae = {"residue_weights":inputs["seq_mask"],
+        **outputs["predicted_aligned_error"]}
+        if "asym_id" not in pae:
+            pae["asym_id"] = inputs["asym_id"]
+        helix_res= [0,1,2,3,4,5,6, 45,69,100,159]#(1-7 and 46,70,101,160) in pymol
+        contrib=custom_loss.iptm_contrib_variant_A(**pae, use_jnp=True, subset_S=helix_res) # modify predicted_tm_score for our purpose        
+        loss_val = -contrib # we will try to minimize this thing in order to maximise the contrib
 
-        iptm_trimmed = confidence.predicted_tm_score(
-            pae_logits,
-            breaks,
-            residue_weights=seq_mask,
-            asym_id=asym_id,
-            use_jnp=True,
-        )
-
-        """ compute plugged iptm and the difference between plugged and empty"""
-        p = get_ptm(inputs, outputs, interface=True)
-        plugged_i_ptm = mask_loss(p)
-
-        # define loss: having the biggest plugged - empty value means minimizing 1-delta
-        delta= plugged_i_ptm-iptm_trimmed
-        loss_val = 1-jnp.abs(delta)
-
-        return {"iptm_delta": loss_val}
+        return {"iptm_contrib_A_helix": loss_val}
 
     # register the new loss in the model’s callbacks
-    self._callbacks["model"]["loss"].append(loss_delta_iptm)
-    self.opt["weights"]["iptm_delta"] = weight
+    self._callbacks["model"]["loss"].append(loss_contrib_A_helix_iptm)
+    self.opt["weights"]["iptm_contrib_A_helix"] = weight
+
+
+def add_i_ptm_contrib_A_barrel_loss(self, weight=0.1):
+    """
+    Adds a differentiable proxy loss encouraging binders that
+    have low "ipTM material" for the residues associated with the helix
+    i.e. maximise the contribution of the helix for the global iptm, or minimise the iptm contribution of the interactions from the side of the barrel 
+  
+    """
+    target_len = self._target_len
+    
+    binder_len=self._binder_len
+    def loss_contrib_A_barrel_iptm(inputs, outputs):
+        """Compute differentiable "ipTM material score" """
+        pae = {"residue_weights":inputs["seq_mask"],
+        **outputs["predicted_aligned_error"]}
+        if "asym_id" not in pae:
+            pae["asym_id"] = inputs["asym_id"]
+        barrel_res= [70,71,75,102,103,104,130,132,131,133,157,158]#(71,72,76,103-105, 131-134, 158-159)in pymol
+        contrib=custom_loss.iptm_contrib_variant_A(**pae, use_jnp=True, subset_S=barrel_res) # modify predicted_tm_score for our purpose        
+        loss_val = contrib # we will try to minimize this thing
+        return {"iptm_contrib_A_barrel": loss_val}
+
+    # register the new loss in the model’s callbacks
+    self._callbacks["model"]["loss"].append(loss_contrib_A_barrel_iptm)
+    self.opt["weights"]["iptm_contrib_A_barrel"] = weight
 
 
 # add helicity loss
