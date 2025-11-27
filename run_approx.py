@@ -79,8 +79,8 @@ while i < 100:
   # check the terminate signal:
   if trajectory.aux["log"]["terminate"] != "":
     i-=1 # to keep producing binders
-    if os.path.exists(f"/Trajectory/{binder_name}.pdb"):
-      os.remove(f"/Trajectory/{binder_name}")
+    if os.path.exists(f"/Trajectory/{design_name}.pdb"):
+      os.remove(f"/Trajectory/{design_name}.pdb")
     continue # the binder wouldn't have been selected by BindCraft for pMPNN optimisation, so we don't keep it
   #else : keep going with the metrics computation
   trajectory_metrics[design_name] = copy_dict(trajectory._tmp["best"]["aux"]["log"]) # permet de récupérer iptm plugged et empty
