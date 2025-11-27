@@ -132,7 +132,7 @@ while i < 100:
   current_design_df = pd.DataFrame([current_design_data], index=[design_name])
   print(current_design_df)
   print( list(current_design_df.columns))
-  if i==0:
+  if i==1:
     first=True
   else:
     first=False # save header in csv only if this is the first time we're saving something inside
