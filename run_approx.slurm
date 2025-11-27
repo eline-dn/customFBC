@@ -1,13 +1,13 @@
 #!/bin/bash
 #SBATCH --nodes 1
 #SBATCH --ntasks 1
-#SBATCH --cpus-per-task 1
+#SBATCH --cpus-per-task 8
 #SBATCH --partition=h100
 #SBATCH --qos=normal
 #SBATCH --gres=gpu:1
 #SBATCH --mem 42gb
 #SBATCH --time 06:00:00
-#SBATCH --output=approx_test_%A.log
+#SBATCH --output=approx_%A.log
 
 #SBATCH --mail-type=ALL
 

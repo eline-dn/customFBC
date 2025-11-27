@@ -2,7 +2,7 @@
 ############## ColabDesign functions
 ####################################
 ### Import dependencies
-import os, re, shutil, math, pickle
+import os, re, shutil, math, pickle, sys
 import matplotlib.pyplot as plt
 import numpy as np
 import jax
@@ -205,7 +205,7 @@ def binder_hallucination(design_name, starting_pdb, chain, target_hotspot_residu
 
     ### save trajectory PDB
     final_plddt = get_best_plddt(af_model, length)
-    #af_model.save_pdb(model_pdb_path)
+    af_model.save_pdb(model_pdb_path)
     af_model.aux["log"]["terminate"] = ""
 
     # let's check whether the trajectory is worth optimising by checking confidence, clashes, and contacts

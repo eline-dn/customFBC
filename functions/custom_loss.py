@@ -173,7 +173,7 @@ def predicted_tm_score(logits, breaks, residue_weights = None,
 import jax
 import jax.numpy as jnp
 
-def iptm_contrib_variant_A(logits, breaks, residue_weights=None, asym_id, subset_S, use_jnp=True):
+def iptm_contrib_variant_A(logits, breaks, asym_id, residue_weights=None, subset_S=[0], use_jnp=True):
     """
     Variant A: absolute contribution of subset S to the global iPTM.
 
@@ -191,7 +191,7 @@ def iptm_contrib_variant_A(logits, breaks, residue_weights=None, asym_id, subset
     """
 
     N = logits.shape[0]
-     if use_jnp:
+    if use_jnp:
        _np, _softmax = jnp, jax.nn.softmax
     else:
       _np, _softmax = np, scipy.special.softmax
@@ -248,7 +248,7 @@ def iptm_contrib_variant_A(logits, breaks, residue_weights=None, asym_id, subset
 """
 
 
-  
+
 #----- same as af until now-------
 
 
