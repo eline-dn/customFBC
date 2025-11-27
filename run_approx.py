@@ -136,7 +136,7 @@ while i < 100:
     first=True
   else:
     first=False # save header in csv only if this is the first time we're saving something inside
-  current_design_df.to_csv(os.path.join(target_settings["design_path"], 'all_design_stats.csv'), mode='a', header=first, index=True)
+  current_design_df.to_csv(os.path.join(target_settings["design_path"], 'opti_design_stats.csv'), mode='a', header=first, index=True)
 
       # Append the row to the main DataFrame
   #all_design_stats_df = pd.concat([all_design_stats_df, current_design_df])
