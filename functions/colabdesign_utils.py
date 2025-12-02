@@ -580,7 +580,7 @@ def add_i_ptm_contrib_A_helix_loss(self, weight=0.1):
             pae["asym_id"] = inputs["asym_id"]
         helix_res= [0,1,2,3,4,5,6, 45,69,100,159]#(1-7 and 46,70,101,160) in pymol
         contrib=iptm_contrib_variant_A(**pae, use_jnp=True, subset_S=helix_res) # modify predicted_tm_score for our purpose        
-        loss_val = -contrib # we will try to minimize this thing in order to maximise the contrib
+        loss_val = -10*contrib # we will try to minimize this thing in order to maximise the contrib
 
         return {"iptm_contrib_A_helix": loss_val}
 
@@ -607,7 +607,7 @@ def add_i_ptm_contrib_A_barrel_loss(self, weight=0.1):
             pae["asym_id"] = inputs["asym_id"]
         barrel_res= [70,71,75,102,103,104,130,132,131,133,157,158]#(71,72,76,103-105, 131-134, 158-159)in pymol
         contrib=iptm_contrib_variant_A(**pae, use_jnp=True, subset_S=barrel_res) # modify predicted_tm_score for our purpose        
-        loss_val = contrib # we will try to minimize this thing
+        loss_val = 10*contrib # we will try to minimize this thing
         return {"iptm_contrib_A_barrel": loss_val}
 
     # register the new loss in the model’s callbacks
