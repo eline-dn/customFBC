@@ -46,7 +46,9 @@ def correlation(df, col_x, col_y, condition_col):
   ax.text(0.05, 0.95, f'Pearson R: {r:.2f}', transform=ax.transAxes, fontsize=10, verticalalignment='top', bbox=dict(boxstyle='round,pad=0.5', fc='yellow', alpha=0.5))
 
   plt.tight_layout()
-  plt.show()
+  #plt.show()
+  plt.savefig(f"Scatter_{col_x}_vs_{col_y}.png")
+  plt.close()
 
 
 def plot_distribution(df, col, conditions, condition_col):
@@ -63,7 +65,9 @@ def plot_distribution(df, col, conditions, condition_col):
   plt.ylabel('Density') # Changed label to Density
   plt.title(f'Distribution of {col} ')
   plt.legend()
-  plt.show()
+  #plt.show()
+  plt.savefig(f"distribution_{col}_acr_{condition_col}.png")
+  plt.close()
 
 
 
@@ -71,8 +75,8 @@ def plot_distribution(df, col, conditions, condition_col):
 
 #---------------------------------------
 conditions=list(("ct0","ct5bis", "ct7","ct8","ct9","ct10"))
-concat_conditions(data_path="/work/lpdi/users/eline/binderdesign", conditions=conditions, csv_pattern="opti_design_stats")
-
+df=concat_conditions(data_path="/work/lpdi/users/eline/binderdesign", conditions=conditions, csv_pattern="opti_design_stats")
+df.head()
 correlation(
     df=df,
     col_x='iptm_contrib_A_barrel',
