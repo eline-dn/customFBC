@@ -1,3 +1,5 @@
+import numpy as np
+import glob
 import pandas as pd
 import matplotlib.pyplot as plt
 import os
@@ -15,21 +17,34 @@ def concat_conditions(data_path, conditions, csv_pattern="opti_design_stats"):
   df_list=list()
   for csv in glob.glob(f"{data_path}/*/{csv_pattern}*.csv") :
     # check condition name 
-    if "/".split(csv)[-2] in conditions:
-      condition="/".split(csv)[-2]
+    print(csv)
+    if csv.split("/")[-2] in conditions:
+      condition=csv.split("/")[-2]
       print("processing condition", condition)
     else:
       continue
     df = pd.read_csv(csv)
     df['condition'] = condition
-    if df.iloc[:, 0].astype(str).str[:len(condition)] != condition:
-      term=df.iloc[:, 0].astype(str).str[:len(condition)]
+    print(df.head())
+    if df.iloc[1, 0][:len(condition)] != condition:
+      term=df.iloc[1, 0][:len(condition)]
       print(f"Warning: mismatching condition ({condition}) and binder terminology ({term}), please check data")
     # remove any non data lines: eg additionnal headers
-    df['Tenant'].replace('', np.nan, inplace=True)
-    df.dropna(subset=[0], inplace=True)# nothing in fiirst col
+    #df[0].replace('', np.nan, inplace=True)
+    df.iloc[:,0]=df.iloc[:, 0].replace('', np.nan)
+    first_column_name = df.columns[0]
+    df=df.dropna(subset=[first_column_name])# nothing in fiirst col
+    # Define columns to exclude from numeric conversion
+    exclude_columns = [first_column_name, 'models', 'condition'] # 'condition' is also typically a string
+    # Get all column names from the DataFrame
+    all_columns = df.columns.tolist()
+    # Filter out the excluded columns to get the list of columns to convert
+    columns_to_convert = [col for col in all_columns if col not in exclude_columns]
+    for col in columns_to_convert:
+      # Convert column to numeric, coercing errors to NaN
+      df[col] = pd.to_numeric(df[col], errors='coerce')
     df_list.append(df)
-  return(pd.concat(df_list, ignore_index=True)
+  return(pd.concat(df_list, ignore_index=True))
 
 
 def correlation(df, col_x, col_y, condition_col):
