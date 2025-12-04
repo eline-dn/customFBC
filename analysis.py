@@ -70,7 +70,7 @@ def plot_distribution(df, col, conditions, condition_col):
 
 
 #---------------------------------------
-conditions=list(("ct0","ct5bis", "ct6", "ct7","ct8","ct9","ct10"))
+conditions=list(("ct0","ct5bis", "ct7","ct8","ct9","ct10"))
 concat_conditions(data_path="/work/lpdi/users/eline/binderdesign", conditions=conditions, csv_pattern="opti_design_stats")
 
 correlation(
